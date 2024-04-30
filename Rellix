@@ -1,0 +1,3 @@
+loadstring(game:HttpGet("https://raw.githubusercontent.com/l32W7/Rellix/main/Rellix", true))()
+
+--Made by l32W7
