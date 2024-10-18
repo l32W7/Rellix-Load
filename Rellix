@@ -1,1 +1,534 @@
+local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
+
+local Window = OrionLib:MakeWindow({Name = "Rivals🩸⚔️", HidePremium = false, SaveConfig = true, ConfigFolder = "Eclipse"})
+
+local AimbotTab = Window:MakeTab({
+    Name = "Aimbots",
+    Icon = "rbxassetid://92562812358384",
+    PremiumOnly = false
+})
+
+local VisualsTab = Window:MakeTab({
+    Name = "Visuals",
+    Icon = "rbxassetid://92562812358384",
+    PremiumOnly = false
+})
+
+local MiscTab = Window:MakeTab({
+    Name = "Misc",
+    Icon = "rbxassetid://",
+    PremiumOnly = false
+})
+
+-- Notification
+OrionLib:MakeNotification({
+    Name = "Loaded Eclipse!",
+    Content = "@l32W7",
+    Image = "rbxassetid://",
+    Time = 5
+})
+
+-- Sections
+local AimbotSection = AimbotTab:AddSection({ Name = "Aimbot Section" })
+local CamLockSelection = AimbotTab:AddSection({ Name = "CamLock Section" })
+local EspSection = VisualsTab:AddSection({ Name = "Esp Section" })
+local SelfSection = VisualsTab:AddSection({ Name = "Self Section" })
+local CheatSection = VisualsTab:AddSection({ Name = "Cheat Section" })
+local CreditsSection = MiscTab:AddSection({ Name = "Credits" })
+
+-- Variables
+local aimbotEnabled = false
+local espEnabled = false
+local EspColor = Color3.fromRGB(255, 0, 0)
+local SelfColorDefault = false
+local ColorOfCharacterValue = Color3.fromRGB(0, 0, 0)
+
+-- CamLock specific variables
+local camlockToggle = false
+local camlockActive = false -- Tracks whether CamLock is active from the keybind
+local targetPlayer = nil
+
+-- Services
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local runService = game:GetService("RunService")
+local camera = game.Workspace.CurrentCamera
+local player = Players.LocalPlayer
+
+
+local screenSize = workspace.CurrentCamera.ViewportSize
+local screenWidth = screenSize.X
+local screenHeight = screenSize.Y
+
+
+local circle = Drawing.new("Circle")
+circle.Visible = false 
+circle.Filled = false
+circle.Color = Color3.new(1, 1, 1) 
+circle.Thickness = 3  
+circle.NumSides = 50  
+circle.Position = Vector2.new(screenWidth / 2, screenHeight / 2) 
+
+runService.RenderStepped:Connect(function()
+    screenSize = workspace.CurrentCamera.ViewportSize
+    screenWidth = screenSize.X
+    screenHeight = screenSize.Y
+    circle.Position = Vector2.new(screenWidth / 2, screenHeight / 2)
+end)
+
+
+
+
+
+-- Function to change character color
+local function changeCharacterColor(color)
+    local character = player.Character or player.CharacterAdded:Wait()
+
+    for _, part in pairs(character:GetChildren()) do
+        if part:IsA("BasePart") then  
+            part.Color = color
+        end
+    end
+end
+
+-- Toggle for SelfColor
+SelfSection:AddToggle({
+    Name = "SelfColor",
+    Default = false,
+    Callback = function(Value)
+        SelfColorDefault = Value
+        if SelfColorDefault then
+            while SelfColorDefault do
+                changeCharacterColor(ColorOfCharacterValue)
+                wait(1)
+            end
+        end
+    end    
+})
+
+
+
+
+
+
+local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+
+local player = Players.LocalPlayer
+local humanoidRootPart = nil
+local camera = workspace.CurrentCamera
+
+local flySpeed = 50 -- Initial fly speed (controlled by the slider)
+local bodyVelocity = nil
+local bodyGyro = nil
+local flying = false
+local moveDirection = Vector3.new(0, 0, 0)
+local goingUp = false
+local FlyToggle = false -- Global toggle for the flying script
+
+-- Randomized speed adjustment function (if needed)
+local function getRandomSpeed(baseSpeed)
+    return baseSpeed + math.random(-5, 5) -- Slight speed randomization
+end
+
+-- Start flying
+local function startFlying()
+    if not FlyToggle then return end -- Ensure FlyToggle is true before flying
+    if not humanoidRootPart then return end -- Ensure HumanoidRootPart exists
+
+    flying = true
+    bodyVelocity = Instance.new("BodyVelocity")
+    bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+    bodyVelocity.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+    bodyVelocity.P = 10000
+    bodyVelocity.Parent = humanoidRootPart
+
+    bodyGyro = Instance.new("BodyGyro")
+    bodyGyro.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
+    bodyGyro.CFrame = humanoidRootPart.CFrame
+    bodyGyro.P = 10000
+    bodyGyro.Parent = humanoidRootPart
+end
+
+-- Stop flying
+local function stopFlying()
+    flying = false
+    if bodyVelocity then
+        bodyVelocity:Destroy()
+        bodyVelocity = nil
+    end
+    if bodyGyro then
+        bodyGyro:Destroy()
+        bodyGyro = nil
+    end
+    moveDirection = Vector3.new(0, 0, 0)
+end
+
+-- Update movement direction based on input
+local function updateMoveDirection()
+    moveDirection = Vector3.new(0, 0, 0)
+    if UIS:IsKeyDown(Enum.KeyCode.W) then
+        moveDirection = moveDirection + camera.CFrame.LookVector
+    end
+    if UIS:IsKeyDown(Enum.KeyCode.S) then
+        moveDirection = moveDirection - camera.CFrame.LookVector
+    end
+    if UIS:IsKeyDown(Enum.KeyCode.A) then
+        moveDirection = moveDirection - camera.CFrame.RightVector
+    end
+    if UIS:IsKeyDown(Enum.KeyCode.D) then
+        moveDirection = moveDirection + camera.CFrame.RightVector
+    end
+    if goingUp then
+        moveDirection = moveDirection + Vector3.new(0, 1, 0)
+    end
+    if moveDirection.Magnitude > 0 then
+        moveDirection = moveDirection.Unit
+    end
+end
+
+-- Setup flying mechanics
+local function setupFlying()
+    UIS.InputBegan:Connect(function(input)
+        if input.KeyCode == Enum.KeyCode.Space and flying and FlyToggle then
+            goingUp = true
+        end
+    end)
+
+    UIS.InputEnded:Connect(function(input)
+        if input.KeyCode == Enum.KeyCode.Space and flying then
+            goingUp = false
+        end
+    end)
+
+    RunService.RenderStepped:Connect(function()
+        if flying and FlyToggle then -- Check FlyToggle inside the render loop
+            updateMoveDirection()
+            if bodyVelocity then
+                bodyVelocity.Velocity = moveDirection * getRandomSpeed(flySpeed) -- Uses flySpeed
+            end
+            if bodyGyro then
+                bodyGyro.CFrame = camera.CFrame
+            end
+        else
+            -- If FlyToggle is false, stop flying to ensure it's off
+            stopFlying()
+        end
+    end)
+end
+
+-- Handle character respawning
+local function onCharacterAdded(newCharacter)
+    humanoidRootPart = newCharacter:WaitForChild("HumanoidRootPart")
+    stopFlying() -- Ensure flying is stopped on respawn
+    setupFlying() -- Re-setup the flying controls
+end
+
+-- Connect character-added event
+player.CharacterAdded:Connect(onCharacterAdded)
+
+-- Check if character already exists
+if player.Character then
+    onCharacterAdded(player.Character)
+end
+
+-- Add the keybind to toggle flying
+CheatSection:AddBind({
+    Name = "Toggle FlyBind",
+    Default = Enum.KeyCode.V, -- Default keybind is V
+    Hold = false,
+    Callback = function()
+        if FlyToggle then -- Check if the fly script is enabled
+            if flying then
+                stopFlying()
+            else
+                startFlying()
+            end
+        end
+    end    
+})
+
+-- Add the slider to control fly speed
+CheatSection:AddSlider({
+    Name = "FlySpeed",
+    Min = 0,
+    Max = 1000,
+    Default = 50, -- Initial speed value
+    Color = Color3.fromRGB(255, 255, 255),
+    Increment = 25,
+    ValueName = "Speed",
+    Callback = function(FlySpeedValue)
+        flySpeed = FlySpeedValue -- Update flySpeed with the slider value
+    end    
+})
+
+-- Add the fly toggle to enable/disable the whole fly script
+CheatSection:AddToggle({
+    Name = "Fly",
+    Default = false,
+    Callback = function(Value)
+        FlyToggle = Value -- Enable or disable the fly script
+        if not FlyToggle then
+            stopFlying() -- Make sure to stop flying if toggled off
+        end
+    end
+})
+
+
+
+
+
+
+
+
+
+
+
+
+
+local enabledFov = false
+
+AimbotSection:AddToggle({
+	Name = "Fov Toggle!",
+	Default = false,
+	Callback = function(Value)
+        enabledFov = Value 
+        circle.Visible = enabledFov 
+	end
+})
+
+-- Function to get nearest player for CamLock and Aimbot
+local function getNearestPlayer()
+    local nearestPlayer = nil
+    local shortestDistance = math.huge
+
+    for _, otherPlayer in pairs(Players:GetPlayers()) do
+        if otherPlayer ~= player then
+            local character = otherPlayer.Character
+            if character and character:FindFirstChild("Head") then
+                local distance = (player.Character.HumanoidRootPart.Position - character.HumanoidRootPart.Position).magnitude
+                
+                if distance < shortestDistance then
+                    nearestPlayer = otherPlayer
+                    shortestDistance = distance
+                end
+            end
+        end
+    end
+
+    return nearestPlayer
+end
+
+
+local Camera = game.Workspace:WaitForChild("Camera")
+--Fov
+SelfSection:AddSlider({
+	Name = "Fov",
+	Min = 0,
+	Max = 120,
+	Default = 70,
+	Color = Color3.fromRGB(255,255,255),
+	Increment = 1,
+	ValueName = "",
+	Callback = function(Value)
+       Camera.FieldOfView = Value
+	end    
+})
+
+AimbotSection:AddSlider({
+	Name = "Fov Size",
+	Min = 0,
+	Max = 500,
+	Default = 5,
+	Color = Color3.fromRGB(255,255,255),
+	Increment = 1,
+	ValueName = "",
+	Callback = function(RadiusValue)
+		circle.Radius = RadiusValue
+	end    
+})
+
+-- Function to update the camera for CamLock
+local function updateCamera()
+    while camlockActive do
+        if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
+            local headPosition = targetPlayer.Character.Head.Position
+            local predictionOffset = targetPlayer.Character.HumanoidRootPart.Velocity * 0.1 -- Adjust multiplier for prediction
+            local predictedPosition = headPosition + predictionOffset
+            
+            camera.CFrame = CFrame.new(camera.CFrame.Position, predictedPosition)
+        end
+        runService.RenderStepped:Wait()
+    end
+end
+
+-- Toggle for CamLock
+CamLockSelection:AddToggle({
+    Name = "CamLock",
+    Default = false,
+    Callback = function(Value)
+        camlockToggle = Value -- Update the camlockToggle based on the toggle state
+        if not camlockToggle then
+            -- If CamLock is disabled, stop camlock and reset the camera
+            camlockActive = false
+            camera.CameraType = Enum.CameraType.Custom
+        end
+    end    
+})
+
+-- Keybind for CamLock
+CamLockSelection:AddBind({
+    Name = "CamLock Bind",
+    Default = Enum.KeyCode.Q,
+    Hold = false,
+    Callback = function()
+        if camlockToggle then -- Ensure CamLock is enabled before activating the bind
+            camlockActive = not camlockActive
+
+            if camlockActive then
+                targetPlayer = getNearestPlayer()
+                updateCamera()
+            else
+                targetPlayer = nil
+                camera.CameraType = Enum.CameraType.Custom
+            end
+        end
+    end    
+})
+
+-- Color Picker for SelfColor
+SelfSection:AddColorpicker({
+    Name = "ChangeColorOfCharacter",
+    Default = Color3.fromRGB(0, 0, 0),
+    Callback = function(NewColor)
+        ColorOfCharacterValue = NewColor
+    end
+})
+
+-- ESP Functions
+local function addHighlightToPlayer(player)
+    if player.Character and not player.Character:FindFirstChild("HighlightEsp") then
+        local Highlight = Instance.new("Highlight")
+        Highlight.Name = "HighlightEsp"
+        Highlight.FillColor = EspColor
+        Highlight.FillTransparency = 0.8
+        Highlight.Parent = player.Character
+    end
+end
+
+local function removeHighlightFromPlayer(player)
+    if player.Character then
+        local highlight = player.Character:FindFirstChild("HighlightEsp")
+        if highlight then
+            highlight:Destroy()
+        end
+    end
+end
+
+-- Function to handle player respawning and apply ESP
+local function applyEspToCharacter(player)
+    player.CharacterAdded:Connect(function(character)
+        wait(1) -- Small delay to ensure character loads
+        if espEnabled then
+            addHighlightToPlayer(player)
+        end
+    end)
+end
+
+-- Apply ESP to all players currently in-game and set up respawn logic
+local function updateEspForAllPlayers()
+    for _, player in pairs(Players:GetPlayers()) do
+        addHighlightToPlayer(player) -- Add ESP to current players
+        applyEspToCharacter(player) -- Ensure ESP re-applies on respawn
+    end
+
+    -- Ensure ESP applies to new players
+    Players.PlayerAdded:Connect(function(newPlayer)
+        applyEspToCharacter(newPlayer)
+        newPlayer.CharacterAdded:Connect(function()
+            if espEnabled then
+                addHighlightToPlayer(newPlayer)
+            end
+        end)
+    end)
+end
+
+EspSection:AddToggle({
+    Name = "ESP",
+    Default = false,
+    Callback = function(Value)
+        espEnabled = Value
+        if espEnabled then
+            updateEspForAllPlayers() -- Start applying ESP to all players and handle respawns
+        else
+            for _, player in pairs(Players:GetPlayers()) do
+                removeHighlightFromPlayer(player)
+            end
+        end
+    end    
+})
+
+-- Color picker for ESP
+EspSection:AddColorpicker({
+    Name = "Esp Color",
+    Default = Color3.fromRGB(255, 0, 0),
+    Callback = function(NewColor)
+        EspColor = NewColor
+        for _, player in pairs(Players:GetPlayers()) do
+            local highlight = player.Character and player.Character:FindFirstChild("HighlightEsp")
+            if highlight then
+                highlight.FillColor = EspColor
+            end
+        end
+    end
+})
+
+-- Aimbot Section
+-- Aimbot Section
+local holdingMouseButton = false -- Tracks whether the mouse button is held
+
+local function lookAtNearestPlayer()
+    local nearestPlayer = getNearestPlayer()
+
+    if nearestPlayer and nearestPlayer.Character and nearestPlayer.Character:FindFirstChild("Head") then
+        local headPosition = nearestPlayer.Character.Head.Position
+        camera.CFrame = CFrame.new(camera.CFrame.Position, headPosition)
+    end
+end
+
+-- Toggle for Aimbot
+AimbotSection:AddToggle({
+    Name = "Aimbot",
+    Default = false,
+    Callback = function(Value)
+        aimbotEnabled = Value
+    end    
+})
+
+-- Detect when mouse button is pressed
+UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 and not gameProcessedEvent and aimbotEnabled then
+        holdingMouseButton = true 
+
+ 
+        while holdingMouseButton do
+            lookAtNearestPlayer()
+            runService.RenderStepped:Wait() 
+        end
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input, gameProcessedEvent)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 and not gameProcessedEvent then
+        holdingMouseButton = false 
+    end
+end)
+
+
+-- Credits Section
+CreditsSection:AddLabel("Made By @l32W7")
+
+-- Initialize OrionLib
+OrionLib:Init()
 
